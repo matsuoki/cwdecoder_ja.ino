@@ -156,7 +156,7 @@ void setup() {
 
      if (digitalRead(2) == HIGH) {     //スイッチの状態を調べる
           digitalWrite(13,HIGH) ;      //スイッチが押されているならLEDを点灯
-          sw = SQ_JAPANESE; //和文に強制的に切り替える
+          sw = SW_JAPANESE; //和文に強制的に切り替える
      }
      if (digitalRead(3) == HIGH) {     //スイッチの状態を調べる
           digitalWrite(13,HIGH) ;      //スイッチが押されているならLEDを点灯
