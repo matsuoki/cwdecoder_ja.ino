@@ -13,7 +13,8 @@
 // if you want to know about FFT the http://www.dspguide.com/pdfbook.htm //
 ///////////////////////////////////////////////////////////////////////////
 
-#include <LiquidCrystal.h>
+//#include <LiquidCrystal.h>  // LCD
+#include <LiquidCrystal_I2C.h>  // LCD I2C
 
 ///////////////////////////////////////////////
 // select the pins used on the LCD panel      /
@@ -21,7 +22,12 @@
 //  LiquidCrystal lcd(RS, E, D4, D5, D6, D7) //
 ///////////////////////////////////////////////
 
-LiquidCrystal lcd( 8, 9, 4, 5, 6, 7);
+//LiquidCrystal lcd( 8, 9, 4, 5, 6, 7); // LCD 
+
+// using I2C
+// LiquidCrystal_I2C lcd (address , chars, lines )
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+
 
 const int colums = 16; /// have to be 16 or 20
 const int rows = 2;  /// have to be 2 or 4
