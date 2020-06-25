@@ -26,6 +26,9 @@ LiquidCrystal lcd( 8, 9, 4, 5, 6, 7);
 const int colums = 16; /// have to be 16 or 20
 const int rows = 2;  /// have to be 2 or 4
 
+const int SW_JAPANESE = 1; 
+const int SW_INTERNATIONAL = 0; 　// INTERNATIONAL or ITU
+
 int lcdindex = 0;
 int line1[colums];
 int line2[colums];
@@ -103,7 +106,7 @@ char code[20];
 int stop = LOW;
 int wpm;
 
-int sw = 0; //この変数宣言と初期値を追加して下さい
+int sw = SW_INTERNATIONAL; //この変数宣言と初期値を追加して下さい
 
 ////////////////
 // init setup //
@@ -153,11 +156,11 @@ void setup() {
 
      if (digitalRead(2) == HIGH) {     //スイッチの状態を調べる
           digitalWrite(13,HIGH) ;      //スイッチが押されているならLEDを点灯
-          sw = 1; //和文に強制的に切り替える
+          sw = SQ_JAPANESE; //和文に強制的に切り替える
      }
      if (digitalRead(3) == HIGH) {     //スイッチの状態を調べる
           digitalWrite(13,HIGH) ;      //スイッチが押されているならLEDを点灯
-          sw = 0; //欧文に強制的に切り替える
+          sw = SW_INTERNATIONAL; //欧文に強制的に切り替える
      }
 //     else {                            //この行を含む、以下3行をコメントアウトしないと和文切替時にLEDが点かない
 //          digitalWrite(13,LOW) ;       //スイッチが押されていないならLEDを消灯
@@ -321,12 +324,12 @@ void setup() {
 void docode(){
 
 
-    if (strcmp(code,"-..---") == 0) sw = 1; //和文
-    if (strcmp(code,"...-.") == 0) sw = 0; //欧文
+    if (strcmp(code,"-..---") == 0) sw = SW_JAPANESE; //和文
+    if (strcmp(code,"...-.") == 0) sw = SW_INTERNATIONAL; //欧文
     
 
-    if (sw == 0){
-        if (strcmp(code,".-..-.") == 0) {printascii(0x29); sw = 1;} //閉じカッコの後は和文に戻る
+    if (sw == SW_INTERNATIONAL){
+        if (strcmp(code,".-..-.") == 0) {printascii(0x29); sw = SW_JAPANESE;} //閉じカッコの後は和文に戻る
       
         if (strcmp(code,".-") == 0) printascii(65);
 	if (strcmp(code,"-...") == 0) printascii(66);
@@ -389,8 +392,8 @@ void docode(){
 	if (strcmp(code,"---.") == 0) printascii(4);
 	if (strcmp(code,".--.-") == 0) printascii(6);
     }
-    if (sw == 1){ //wabun
-        if (strcmp(code,"-.--.-") == 0) {printascii(0x28); sw = 0;} //カッコの後は欧文
+    if (sw == SW_JAPANESE){ //wabun
+        if (strcmp(code,"-.--.-") == 0) {printascii(0x28); sw = SW_INTERNATIONAL;} //カッコの後は欧文
         
         if (strcmp(code,"--.--") == 0) printascii(0xB1);
 	if (strcmp(code,".-") == 0) printascii(0xB2);
@@ -534,7 +537,7 @@ void updateinfolinelcd(){
 		lcd.setCursor((place)-1,0);
 		lcd.print(wpm);
 		lcd.setCursor((place),0);
-                if (sw == 0){
+                if (sw == SW_INTERNATIONAL){
                   lcd.print(" WPM [A] ");
                 }else{
                   lcd.print(" WPM [W] ");
@@ -544,7 +547,7 @@ void updateinfolinelcd(){
   		lcd.setCursor((place)-2,0);
 		lcd.print(wpm);
 		lcd.setCursor((place),0);
-                if (sw == 0){
+                if (sw == SW_INTERNATIONAL){
                   lcd.print(" WPM [A] ");
                 }else{
                   lcd.print(" WPM [W] ");
