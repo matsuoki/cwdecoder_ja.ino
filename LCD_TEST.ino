@@ -1,5 +1,5 @@
 // LCD TEST PROGRAM 
-// https://github.com/matsuoki/cwdecoder_ja.ino/
+// 
 
 #include <LiquidCrystal_I2C.h>
 const int LCD_COLUMNS = 20;
@@ -33,6 +33,7 @@ void loop() {
 
   lcd.setCursor(c, r);
   lcd.print(char(cnt));
+
   cnt++;
   c++;
   if ( c >= LCD_COLUMNS ) {
@@ -42,5 +43,7 @@ void loop() {
       r = 0;
     }
   }
+
+
   delay(100);
 }
