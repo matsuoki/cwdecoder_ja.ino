@@ -1,4 +1,7 @@
+// <matsuoki>
 // original : http://www.skovholm.com/decoder_kh.ino
+// https://github.com/matsuoki/cwdecoder_ja.ino/blob/master/cwdecoder_ja.ino
+// </matsuoki>
 
 ///////////////////////////////////////////////////////////////////////
 // CW Decoder made by Hjalmar Skovholm Hansen OZ1JHM  VER 1.01       //
@@ -16,24 +19,25 @@
 //#include <LiquidCrystal.h>  // LCD
 #include <LiquidCrystal_I2C.h>  // LCD I2C
 
+
+const int colums = 20; /// have to be 16 or 20
+const int rows = 4;  /// have to be 2 or 4
+const int SW_JAPANESE = 1;  // japanese
+const int SW_INTERNATIONAL = 0; // INTERNATIONAL or ITU
+
+
 ///////////////////////////////////////////////
 // select the pins used on the LCD panel      /
 ///////////////////////////////////////////////
 //  LiquidCrystal lcd(RS, E, D4, D5, D6, D7) //
 ///////////////////////////////////////////////
 
-//LiquidCrystal lcd( 8, 9, 4, 5, 6, 7); // LCD 
+/* Generic LCD*/
+//LiquidCrystal lcd( 8, 9, 4, 5, 6, 7);
 
-// using I2C
-// LiquidCrystal_I2C lcd (address , chars, lines )
-LiquidCrystal_I2C lcd(0x27, 20, 4);
+/* LiquidCrystal_I2C lcd (address , chars, lines ) */
+LiquidCrystal_I2C lcd(0x27, colums, rows);
 
-
-const int colums = 16; /// have to be 16 or 20
-const int rows = 2;  /// have to be 2 or 4
-
-const int SW_JAPANESE = 1; 
-const int SW_INTERNATIONAL = 0; 　// INTERNATIONAL or ITU
 
 int lcdindex = 0;
 int line1[colums];
@@ -43,18 +47,22 @@ int line2[colums];
 // Define 8 specials letters  //
 ////////////////////////////////
 
-byte U_umlaut[8] =   {B01010,B00000,B10001,B10001,B10001,B10001,B01110,B00000}; // 'Ü'　Uにウムラウト
-byte O_umlaut[8] =   {B01010,B00000,B01110,B10001,B10001,B10001,B01110,B00000}; // 'Ö'　Oにウムラウト
-byte A_umlaut[8] =   {B01010,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Ä'　Aにウムラウト
-byte AE_capital[8] = {B01111,B10100,B10100,B11110,B10100,B10100,B10111,B00000}; // 'Æ'　AとEの合字
-byte OE_capital[8] = {B00001,B01110,B10011,B10101,B11001,B01110,B10000,B00000}; // 'Ø'　スラッシュ付きO
-byte fullblock[8] =  {B11111,B11111,B11111,B11111,B11111,B11111,B11111,B11111};  
-byte AA_capital[8] = {B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; // 'Å'　上リング付きA
-byte emtyblock[8] =  {B00000,B00000,B00000,B00000,B00000,B00000,B00000,B00000};  
+byte U_umlaut[8] =   {B01010, B00000, B10001, B10001, B10001, B10001, B01110, B00000}; // 'Ü'　Uにウムラウト
+byte O_umlaut[8] =   {B01010, B00000, B01110, B10001, B10001, B10001, B01110, B00000}; // 'Ö'　Oにウムラウト
+byte A_umlaut[8] =   {B01010, B00000, B01110, B10001, B11111, B10001, B10001, B00000}; // 'Ä'　Aにウムラウト
+byte AE_capital[8] = {B01111, B10100, B10100, B11110, B10100, B10100, B10111, B00000}; // 'Æ'　AとEの合字
+byte OE_capital[8] = {B00001, B01110, B10011, B10101, B11001, B01110, B10000, B00000}; // 'Ø'　スラッシュ付きO
+byte fullblock[8] =  {B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111};
+byte AA_capital[8] = {B00100, B00000, B01110, B10001, B11111, B10001, B10001, B00000}; // 'Å'　上リング付きA
+byte emtyblock[8] =  {B00000, B00000, B00000, B00000, B00000, B00000, B00000, B00000};
 
 int audioInPin = A1;
 int audioOutPin = 11;
-int ledPin = 13;
+
+
+//int ledPin = 13; // default
+int ledPin = LED_BUILTIN;  // toriaezu ....
+
 
 float magnitude ;
 int magnitudelimit = 100;
@@ -86,10 +94,10 @@ float coeff;
 float Q1 = 0;
 float Q2 = 0;
 float sine;
-float cosine;  
-float sampling_freq=8928.0;
-float target_freq=558.0; /// adjust for your needs see above
-float n=48.0;  //// if you change  her please change next line also 
+float cosine;
+float sampling_freq = 8928.0;
+float target_freq = 744.0; /// adjust for your needs see above
+float n = 48.0; //// if you change  her please change next line also
 int testData[48];
 
 //////////////////////////////
@@ -97,7 +105,7 @@ int testData[48];
 // shall be computed so     //
 // this is initial          //
 //////////////////////////////
-int nbtime = 6;  /// ms noise blanker         
+int nbtime = 6;  /// ms noise blanker
 
 long starttimehigh;
 long highduration;
@@ -113,380 +121,395 @@ int stop = LOW;
 int wpm;
 
 int sw = SW_INTERNATIONAL; //この変数宣言と初期値を追加して下さい
+//int sw = SW_JAPANESE; //この変数宣言と初期値を追加して下さい
 
 ////////////////
 // init setup //
 ////////////////
 void setup() {
-  pinMode(2,INPUT) ;    //スイッチに接続ピンをデジタル入力に設定
-  pinMode(13,OUTPUT) ;  //ＬＥＤに接続ピンをデジタル出力に設定
-  
-////////////////////////////////////
-// The basic goertzel calculation //
-////////////////////////////////////
-  int	k;
-  float	omega;
+  pinMode(2, INPUT) ;   //スイッチに接続ピンをデジタル入力に設定
+  pinMode(13, OUTPUT) ; //ＬＥＤに接続ピンをデジタル出力に設定
+
+  ////////////////////////////////////
+  // The basic goertzel calculation //
+  ////////////////////////////////////
+  int  k;
+  float omega;
   k = (int) (0.5 + ((n * target_freq) / sampling_freq));
   omega = (2.0 * PI * k) / n;
   sine = sin(omega);
   cosine = cos(omega);
   coeff = 2.0 * cosine;
 
-///////////////////////////////
-// define special characters //
-///////////////////////////////
- lcd.createChar(0, U_umlaut); //     German
- lcd.createChar(1, O_umlaut); //     German, Swedish
- lcd.createChar(2, A_umlaut); //     German, Swedish 
- lcd.createChar(3, AE_capital); //   Danish, Norwegian
- lcd.createChar(4, OE_capital); //   Danish, Norwegian
- lcd.createChar(5, fullblock);        
- lcd.createChar(6, AA_capital); //   Danish, Norwegian, Swedish
- lcd.createChar(7, emtyblock); 
- lcd.clear(); 
+  ///////////////////////////////
+  // define special characters //
+  ///////////////////////////////
+  lcd.init();
+  lcd.backlight();
+  lcd.createChar(0, U_umlaut); //     German
+  lcd.createChar(1, O_umlaut); //     German, Swedish
+  lcd.createChar(2, A_umlaut); //     German, Swedish
+  lcd.createChar(3, AE_capital); //   Danish, Norwegian
+  lcd.createChar(4, OE_capital); //   Danish, Norwegian
+  lcd.createChar(5, fullblock);
+  lcd.createChar(6, AA_capital); //   Danish, Norwegian, Swedish
+  lcd.createChar(7, emtyblock);
+  lcd.clear();
 
- Serial.begin(115200); 
- pinMode(ledPin, OUTPUT);
- lcd.begin(colums, rows); 
- for (int index = 0; index < colums; index++){
+
+
+  Serial.begin(115200);
+  pinMode(ledPin, OUTPUT);
+  lcd.begin(colums, rows);
+
+  for (int index = 0; index < colums; index++) {
     line1[index] = 32;
-	line2[index] = 32;
- }           
-  
+    line2[index] = 32;
+  }
+
+  Serial.println("Start");
+  lcd.setCursor(1, 1);
+  lcd.print("hello");
 }
 
 ///////////////
 // main loop //
 ///////////////
- void loop() {
+void loop() {
+//
+//  if (digitalRead(2) == HIGH) {     //スイッチの状態を調べる
+//    digitalWrite(13, HIGH) ;     //スイッチが押されているならLEDを点灯
+//    sw = SW_JAPANESE; //和文に強制的に切り替える
+//  }
+//  if (digitalRead(3) == HIGH) {     //スイッチの状態を調べる
+//    digitalWrite(13, HIGH) ;     //スイッチが押されているならLEDを点灯
+//    sw = SW_INTERNATIONAL; //欧文に強制的に切り替える
+//  }
+//  //     else {                            //この行を含む、以下3行をコメントアウトしないと和文切替時にLEDが点かない
+//  //          digitalWrite(13,LOW) ;       //スイッチが押されていないならLEDを消灯
+//  //     }
 
-     if (digitalRead(2) == HIGH) {     //スイッチの状態を調べる
-          digitalWrite(13,HIGH) ;      //スイッチが押されているならLEDを点灯
-          sw = SW_JAPANESE; //和文に強制的に切り替える
-     }
-     if (digitalRead(3) == HIGH) {     //スイッチの状態を調べる
-          digitalWrite(13,HIGH) ;      //スイッチが押されているならLEDを点灯
-          sw = SW_INTERNATIONAL; //欧文に強制的に切り替える
-     }
-//     else {                            //この行を含む、以下3行をコメントアウトしないと和文切替時にLEDが点かない
-//          digitalWrite(13,LOW) ;       //スイッチが押されていないならLEDを消灯
-//     }
-   
-  ///////////////////////////////////// 
+  /////////////////////////////////////
   // The basic where we get the tone //
   /////////////////////////////////////
-  
+
   for (char index = 0; index < n; index++)
   {
     testData[index] = analogRead(audioInPin);
   }
-  for (char index = 0; index < n; index++){
-	  float Q0;
-	  Q0 = coeff * Q1 - Q2 + (float) testData[index];
-	  Q2 = Q1;
-	  Q1 = Q0;	
+  for (char index = 0; index < n; index++) {
+    float Q0;
+    Q0 = coeff * Q1 - Q2 + (float) testData[index];
+    Q2 = Q1;
+    Q1 = Q0;
   }
-  float magnitudeSquared = (Q1*Q1)+(Q2*Q2)-Q1*Q2*coeff;  // we do only need the real part //
+  float magnitudeSquared = (Q1 * Q1) + (Q2 * Q2) - Q1 * Q2 * coeff; // we do only need the real part //
   magnitude = sqrt(magnitudeSquared);
   Q2 = 0;
   Q1 = 0;
 
   //Serial.print(magnitude); Serial.println();  //// here you can measure magnitude for setup..
-  
-  /////////////////////////////////////////////////////////// 
+
+  ///////////////////////////////////////////////////////////
   // here we will try to set the magnitude limit automatic //
   ///////////////////////////////////////////////////////////
-  
-  if (magnitude > magnitudelimit_low){
-    magnitudelimit = (magnitudelimit +((magnitude - magnitudelimit)/6));  /// moving average filter
+
+  if (magnitude > magnitudelimit_low) {
+    magnitudelimit = (magnitudelimit + ((magnitude - magnitudelimit) / 6)); /// moving average filter
   }
- 
+
   if (magnitudelimit < magnitudelimit_low)
-	magnitudelimit = magnitudelimit_low;
-  
+    magnitudelimit = magnitudelimit_low;
+
   ////////////////////////////////////
   // now we check for the magnitude //
   ////////////////////////////////////
 
-  if(magnitude > magnitudelimit*0.6) // just to have some space up 
-     realstate = HIGH; 
+  if (magnitude > magnitudelimit * 0.6) // just to have some space up
+    realstate = HIGH;
   else
-    realstate = LOW; 
-  
-  ///////////////////////////////////////////////////// 
+    realstate = LOW;
+
+  /////////////////////////////////////////////////////
   // here we clean up the state with a noise blanker //
   /////////////////////////////////////////////////////
- 
-  if (realstate != realstatebefore){
-	laststarttime = millis();
-  }
-  if ((millis()-laststarttime)> nbtime){
-	if (realstate != filteredstate){
-		filteredstate = realstate;
-	}
-  }
- 
- ////////////////////////////////////////////////////////////
- // Then we do want to have some durations on high and low //
- ////////////////////////////////////////////////////////////
- 
- if (filteredstate != filteredstatebefore){
-	if (filteredstate == HIGH){
-		starttimehigh = millis();
-		lowduration = (millis() - startttimelow);
-	}
 
-	if (filteredstate == LOW){
-		startttimelow = millis();
-		highduration = (millis() - starttimehigh);
-        if (highduration < (2*hightimesavg) || hightimesavg == 0){
-			hightimesavg = (highduration+hightimesavg+hightimesavg)/3;     // now we know avg dit time ( rolling 3 avg)
-		}
-		if (highduration > (5*hightimesavg) ){
-			hightimesavg = highduration+hightimesavg;     // if speed decrease fast ..
-		}
-	}
+  if (realstate != realstatebefore) {
+    laststarttime = millis();
+  }
+  if ((millis() - laststarttime) > nbtime) {
+    if (realstate != filteredstate) {
+      filteredstate = realstate;
+    }
   }
 
- ///////////////////////////////////////////////////////////////
- // now we will check which kind of baud we have - dit or dah //
- // and what kind of pause we do have 1 - 3 or 7 pause        //
- // we think that hightimeavg = 1 bit                         //
- ///////////////////////////////////////////////////////////////
- 
- if (filteredstate != filteredstatebefore){
-  stop = LOW;
-  if (filteredstate == LOW){  //// we did end a HIGH
-   if (highduration < (hightimesavg*2) && highduration > (hightimesavg*0.6)){ /// 0.6 filter out false dits
-	strcat(code,".");
-	Serial.print(".");
-   }
-   if (highduration > (hightimesavg*2) && highduration < (hightimesavg*6)){ 
-	strcat(code,"-");
-	Serial.print("-");
-	wpm = (wpm + (1200/((highduration)/3)))/2;  //// the most precise we can do ;o)
-   }
+  ////////////////////////////////////////////////////////////
+  // Then we do want to have some durations on high and low //
+  ////////////////////////////////////////////////////////////
+
+  if (filteredstate != filteredstatebefore) {
+    if (filteredstate == HIGH) {
+      starttimehigh = millis();
+      lowduration = (millis() - startttimelow);
+    }
+
+    if (filteredstate == LOW) {
+      startttimelow = millis();
+      highduration = (millis() - starttimehigh);
+      if (highduration < (2 * hightimesavg) || hightimesavg == 0) {
+        hightimesavg = (highduration + hightimesavg + hightimesavg) / 3; // now we know avg dit time ( rolling 3 avg)
+      }
+      if (highduration > (5 * hightimesavg) ) {
+        hightimesavg = highduration + hightimesavg;   // if speed decrease fast ..
+      }
+    }
   }
- 
-   if (filteredstate == HIGH){  //// we did end a LOW
-   
-   float lacktime = 1;
-   if(wpm > 25)lacktime=1.0; ///  when high speeds we have to have a little more pause before new letter or new word 
-   if(wpm > 30)lacktime=1.2;
-   if(wpm > 35)lacktime=1.5;
-   
-   if (lowduration > (hightimesavg*(2*lacktime)) && lowduration < hightimesavg*(5*lacktime)){ // letter space
+
+  ///////////////////////////////////////////////////////////////
+  // now we will check which kind of baud we have - dit or dah //
+  // and what kind of pause we do have 1 - 3 or 7 pause        //
+  // we think that hightimeavg = 1 bit                         //
+  ///////////////////////////////////////////////////////////////
+
+  if (filteredstate != filteredstatebefore) {
+    stop = LOW;
+    if (filteredstate == LOW) { //// we did end a HIGH
+      if (highduration < (hightimesavg * 2) && highduration > (hightimesavg * 0.6)) { /// 0.6 filter out false dits
+        strcat(code, ".");
+        Serial.print(".");
+      }
+      if (highduration > (hightimesavg * 2) && highduration < (hightimesavg * 6)) {
+        strcat(code, "-");
+        Serial.print("-");
+        wpm = (wpm + (1200 / ((highduration) / 3))) / 2; //// the most precise we can do ;o)
+      }
+    }
+
+    if (filteredstate == HIGH) { //// we did end a LOW
+
+      float lacktime = 1;
+      if (wpm > 25)lacktime = 1.0; ///  when high speeds we have to have a little more pause before new letter or new word
+      if (wpm > 30)lacktime = 1.2;
+      if (wpm > 35)lacktime = 1.5;
+
+      if (lowduration > (hightimesavg * (2 * lacktime)) && lowduration < hightimesavg * (5 * lacktime)) { // letter space
+        docode();
+        code[0] = '\0';
+        Serial.print("/");
+      }
+      if (lowduration >= hightimesavg * (5 * lacktime)) { // word space
+        docode();
+        code[0] = '\0';
+        printascii(32);
+        Serial.println();
+      }
+    }
+  }
+
+  //////////////////////////////
+  // write if no more letters //
+  //////////////////////////////
+
+  if ((millis() - startttimelow) > (highduration * 6) && stop == LOW) {
     docode();
-	code[0] = '\0';
-	Serial.print("/");
-   }
-   if (lowduration >= hightimesavg*(5*lacktime)){ // word space
-    docode();
-	code[0] = '\0';
-	printascii(32);
-	Serial.println();
-   }
-  }
- }
- 
- //////////////////////////////
- // write if no more letters //
- //////////////////////////////
-
-  if ((millis() - startttimelow) > (highduration * 6) && stop == LOW){
-   docode();
-   code[0] = '\0';
-   stop = HIGH;
+    code[0] = '\0';
+    stop = HIGH;
   }
 
- /////////////////////////////////////
- // we will turn on and off the LED //
- // and the speaker                 //
- /////////////////////////////////////
- 
-   if(filteredstate == HIGH){ 
-     digitalWrite(ledPin, HIGH);
-	 tone(audioOutPin,target_freq);
-//         tone(audioOutPin,530);
-   }
-   else{
-     digitalWrite(ledPin, LOW);
-	 noTone(audioOutPin);
-   }
- 
- //////////////////////////////////
- // the end of main loop clean up//        
- /////////////////////////////////
- updateinfolinelcd();
- realstatebefore = realstate;
- lasthighduration = highduration;
- filteredstatebefore = filteredstate;
- }
+  /////////////////////////////////////
+  // we will turn on and off the LED //
+  // and the speaker                 //
+  /////////////////////////////////////
+
+  if (filteredstate == HIGH) {
+    digitalWrite(ledPin, HIGH);
+    tone(audioOutPin, target_freq);
+    //         tone(audioOutPin,530);
+  }
+  else {
+    digitalWrite(ledPin, LOW);
+    noTone(audioOutPin);
+  }
+
+  //////////////////////////////////
+  // the end of main loop clean up//
+  /////////////////////////////////
+  updateinfolinelcd();
+  realstatebefore = realstate;
+  lasthighduration = highduration;
+  filteredstatebefore = filteredstate;
+}
 
 ////////////////////////////////
 // translate cw code to ascii //
 ////////////////////////////////
 
-void docode(){
+void docode() {
 
 
-    if (strcmp(code,"-..---") == 0) sw = SW_JAPANESE; //和文
-    if (strcmp(code,"...-.") == 0) sw = SW_INTERNATIONAL; //欧文
-    
+  if (strcmp(code, "-..---") == 0) sw = SW_JAPANESE; //和文
+  if (strcmp(code, "...-.") == 0) sw = SW_INTERNATIONAL; //欧文
 
-    if (sw == SW_INTERNATIONAL){
-        if (strcmp(code,".-..-.") == 0) {printascii(0x29); sw = SW_JAPANESE;} //閉じカッコの後は和文に戻る
-      
-        if (strcmp(code,".-") == 0) printascii(65);
-	if (strcmp(code,"-...") == 0) printascii(66);
-	if (strcmp(code,"-.-.") == 0) printascii(67);
-	if (strcmp(code,"-..") == 0) printascii(68);
-	if (strcmp(code,".") == 0) printascii(69);
-	if (strcmp(code,"..-.") == 0) printascii(70);
-	if (strcmp(code,"--.") == 0) printascii(71);
-	if (strcmp(code,"....") == 0) printascii(72);
-	if (strcmp(code,"..") == 0) printascii(73);
-	if (strcmp(code,".---") == 0) printascii(74);
-	if (strcmp(code,"-.-") == 0) printascii(75);
-	if (strcmp(code,".-..") == 0) printascii(76);
-	if (strcmp(code,"--") == 0) printascii(77);
-	if (strcmp(code,"-.") == 0) printascii(78);
-	if (strcmp(code,"---") == 0) printascii(79);
-	if (strcmp(code,".--.") == 0) printascii(80);
-	if (strcmp(code,"--.-") == 0) printascii(81);
-	if (strcmp(code,".-.") == 0) printascii(82);
-	if (strcmp(code,"...") == 0) printascii(83);
-	if (strcmp(code,"-") == 0) printascii(84);
-	if (strcmp(code,"..-") == 0) printascii(85);
-	if (strcmp(code,"...-") == 0) printascii(86);
-	if (strcmp(code,".--") == 0) printascii(87);
-	if (strcmp(code,"-..-") == 0) printascii(88);
-	if (strcmp(code,"-.--") == 0) printascii(89);
-	if (strcmp(code,"--..") == 0) printascii(90);
 
-	if (strcmp(code,".----") == 0) printascii(49);
-	if (strcmp(code,"..---") == 0) printascii(50);
-	if (strcmp(code,"...--") == 0) printascii(51);
-	if (strcmp(code,"....-") == 0) printascii(52);
-	if (strcmp(code,".....") == 0) printascii(53);
-	if (strcmp(code,"-....") == 0) printascii(54);
-	if (strcmp(code,"--...") == 0) printascii(55);
-	if (strcmp(code,"---..") == 0) printascii(56);
-	if (strcmp(code,"----.") == 0) printascii(57);
-	if (strcmp(code,"-----") == 0) printascii(48);
-
-	if (strcmp(code,"..--..") == 0) printascii(63);
-	if (strcmp(code,".-.-.-") == 0) printascii(46);
-	if (strcmp(code,"--..--") == 0) printascii(44);
-	if (strcmp(code,"-.-.--") == 0) printascii(33);
-	if (strcmp(code,".--.-.") == 0) printascii(64);
-	if (strcmp(code,"---...") == 0) printascii(58);
-	if (strcmp(code,"-....-") == 0) printascii(45);
-	if (strcmp(code,"-..-.") == 0) printascii(47);
-
-	if (strcmp(code,"-.--.") == 0) printascii(40);
-	if (strcmp(code,"-.--.-") == 0) printascii(41);
-	if (strcmp(code,".-...") == 0) printascii(95);
-	if (strcmp(code,"...-..-") == 0) printascii(36);
-	if (strcmp(code,"...-.-") == 0) printascii(42);
-	if (strcmp(code,".-.-.") == 0) printascii(60);
-	if (strcmp(code,"...-.") == 0) printascii(126);
-	//////////////////
-	// The specials //
-	//////////////////
-	if (strcmp(code,".-.-") == 0) printascii(3);
-	if (strcmp(code,"---.") == 0) printascii(4);
-	if (strcmp(code,".--.-") == 0) printascii(6);
+  if (sw == SW_INTERNATIONAL) {
+    if (strcmp(code, ".-..-.") == 0) {
+      printascii(0x29);  //閉じカッコの後は和文に戻る
+      sw = SW_JAPANESE;
     }
-    if (sw == SW_JAPANESE){ //wabun
-        if (strcmp(code,"-.--.-") == 0) {printascii(0x28); sw = SW_INTERNATIONAL;} //カッコの後は欧文
-        
-        if (strcmp(code,"--.--") == 0) printascii(0xB1);
-	if (strcmp(code,".-") == 0) printascii(0xB2);
-	if (strcmp(code,"..-") == 0) printascii(0xB3);
-	if (strcmp(code,"-.---") == 0) printascii(0xB4);
-	if (strcmp(code,".-...") == 0) printascii(0xB5);
-	if (strcmp(code,".-..") == 0) printascii(0xB6);
-	if (strcmp(code,"-.-..") == 0) printascii(0xB7);
-	if (strcmp(code,"...-") == 0) printascii(0xB8);
-	if (strcmp(code,"-.--") == 0) printascii(0xB9);
-	if (strcmp(code,"----") == 0) printascii(0xBA);
-	if (strcmp(code,"-.-.-") == 0) printascii(0xBB);
-	if (strcmp(code,"--.-.") == 0) printascii(0xBC);
-	if (strcmp(code,"---.-") == 0) printascii(0xBD);
-	if (strcmp(code,".---.") == 0) printascii(0xBE);
-	if (strcmp(code,"---.") == 0) printascii(0xBF);
-	if (strcmp(code,"-.") == 0) printascii(0xC0);
-	if (strcmp(code,"..-.") == 0) printascii(0xC1);
-	if (strcmp(code,".--.") == 0) printascii(0xC2);
-	if (strcmp(code,".-.--") == 0) printascii(0xC3);
-	if (strcmp(code,"..-..") == 0) printascii(0xC4);
-	if (strcmp(code,".-.") == 0) printascii(0xC5);
-	if (strcmp(code,"-.-.") == 0) printascii(0xC6);
-	if (strcmp(code,"....") == 0) printascii(0xC7);
-	if (strcmp(code,"--.-") == 0) printascii(0xC8);
-	if (strcmp(code,"..--") == 0) printascii(0xC9);
-	if (strcmp(code,"-...") == 0) printascii(0xCA);
-	if (strcmp(code,"--..-") == 0) printascii(0xCB);
-	if (strcmp(code,"--..") == 0) printascii(0xCC);
-	if (strcmp(code,".") == 0) printascii(0xCD);
-	if (strcmp(code,"-..") == 0) printascii(0xCE);
-	if (strcmp(code,"-..-") == 0) printascii(0xCF);
-	if (strcmp(code,"..-.-") == 0) printascii(0xD0);
-	if (strcmp(code,"-") == 0) printascii(0xD1);
-	if (strcmp(code,"-...-") == 0) printascii(0xD2);
-	if (strcmp(code,"-..-.") == 0) printascii(0xD3);
-	if (strcmp(code,".--") == 0) printascii(0xD4);
-	if (strcmp(code,"-..--") == 0) printascii(0xD5);
-	if (strcmp(code,"--") == 0) printascii(0xD6);
-	if (strcmp(code,"...") == 0) printascii(0xD7);
-	if (strcmp(code,"--.") == 0) printascii(0xD8);
-	if (strcmp(code,"-.--.") == 0) printascii(0xD9);
-	if (strcmp(code,"---") == 0) printascii(0xDA);
-	if (strcmp(code,".-.-") == 0) printascii(0xDB);
-	if (strcmp(code,"-.-") == 0) printascii(0xDC);
-	if (strcmp(code,".-.-.") == 0) printascii(0xDD);
-	if (strcmp(code,"..") == 0) printascii(0xDE);
-	if (strcmp(code,"..--.") == 0) printascii(0xDF);
-        if (strcmp(code,".---") == 0) printascii(0xA6);
 
-	if (strcmp(code,".----") == 0) printascii(49);
-	if (strcmp(code,"..---") == 0) printascii(50);
-	if (strcmp(code,"...--") == 0) printascii(51);
-	if (strcmp(code,"....-") == 0) printascii(52);
-	if (strcmp(code,".....") == 0) printascii(53);
-	if (strcmp(code,"-....") == 0) printascii(54);
-	if (strcmp(code,"--...") == 0) printascii(55);
-	if (strcmp(code,"---..") == 0) printascii(56);
-	if (strcmp(code,"----.") == 0) printascii(57);
-	if (strcmp(code,"-----") == 0) printascii(48);
+    if (strcmp(code, ".-") == 0) printascii(65);
+    if (strcmp(code, "-...") == 0) printascii(66);
+    if (strcmp(code, "-.-.") == 0) printascii(67);
+    if (strcmp(code, "-..") == 0) printascii(68);
+    if (strcmp(code, ".") == 0) printascii(69);
+    if (strcmp(code, "..-.") == 0) printascii(70);
+    if (strcmp(code, "--.") == 0) printascii(71);
+    if (strcmp(code, "....") == 0) printascii(72);
+    if (strcmp(code, "..") == 0) printascii(73);
+    if (strcmp(code, ".---") == 0) printascii(74);
+    if (strcmp(code, "-.-") == 0) printascii(75);
+    if (strcmp(code, ".-..") == 0) printascii(76);
+    if (strcmp(code, "--") == 0) printascii(77);
+    if (strcmp(code, "-.") == 0) printascii(78);
+    if (strcmp(code, "---") == 0) printascii(79);
+    if (strcmp(code, ".--.") == 0) printascii(80);
+    if (strcmp(code, "--.-") == 0) printascii(81);
+    if (strcmp(code, ".-.") == 0) printascii(82);
+    if (strcmp(code, "...") == 0) printascii(83);
+    if (strcmp(code, "-") == 0) printascii(84);
+    if (strcmp(code, "..-") == 0) printascii(85);
+    if (strcmp(code, "...-") == 0) printascii(86);
+    if (strcmp(code, ".--") == 0) printascii(87);
+    if (strcmp(code, "-..-") == 0) printascii(88);
+    if (strcmp(code, "-.--") == 0) printascii(89);
+    if (strcmp(code, "--..") == 0) printascii(90);
 
-	if (strcmp(code,"..--..") == 0) printascii(63);
-	//if (strcmp(code,".-.-.-") == 0) printascii(46);
-	if (strcmp(code,"--..--") == 0) printascii(44);
-	if (strcmp(code,"-.-.--") == 0) printascii(33);
-	if (strcmp(code,".--.-.") == 0) printascii(64);
-	if (strcmp(code,"---...") == 0) printascii(58);
-	if (strcmp(code,"-....-") == 0) printascii(45);
-	//if (strcmp(code,"-..-.") == 0) printascii(47);
+    if (strcmp(code, ".----") == 0) printascii(49);
+    if (strcmp(code, "..---") == 0) printascii(50);
+    if (strcmp(code, "...--") == 0) printascii(51);
+    if (strcmp(code, "....-") == 0) printascii(52);
+    if (strcmp(code, ".....") == 0) printascii(53);
+    if (strcmp(code, "-....") == 0) printascii(54);
+    if (strcmp(code, "--...") == 0) printascii(55);
+    if (strcmp(code, "---..") == 0) printascii(56);
+    if (strcmp(code, "----.") == 0) printascii(57);
+    if (strcmp(code, "-----") == 0) printascii(48);
 
-	//if (strcmp(code,"-.--.") == 0) printascii(40);
-	//if (strcmp(code,"-.--.-") == 0) printascii(41);
-	//if (strcmp(code,".-...") == 0) printascii(95);
-	//if (strcmp(code,"...-..-") == 0) printascii(36);
-	if (strcmp(code,"...-.-") == 0) printascii(42);
-	//if (strcmp(code,".-.-.") == 0) printascii(60);
-	//if (strcmp(code,"...-.") == 0) printascii(126);
-        if (strcmp(code,".--.-") == 0) printascii(45);
-	//////////////////
-	// The specials //
-	//////////////////
-	if (strcmp(code,".-.-..") == 0) printascii(0xA3);
-	if (strcmp(code,".-.-.-") == 0) printascii(0xA4);
-	//if (strcmp(code,".-.-") == 0) printascii(3);
-	//if (strcmp(code,"---.") == 0) printascii(4);
-	//if (strcmp(code,".--.-") == 0) printascii(6);
+    if (strcmp(code, "..--..") == 0) printascii(63);
+    if (strcmp(code, ".-.-.-") == 0) printascii(46);
+    if (strcmp(code, "--..--") == 0) printascii(44);
+    if (strcmp(code, "-.-.--") == 0) printascii(33);
+    if (strcmp(code, ".--.-.") == 0) printascii(64);
+    if (strcmp(code, "---...") == 0) printascii(58);
+    if (strcmp(code, "-....-") == 0) printascii(45);
+    if (strcmp(code, "-..-.") == 0) printascii(47);
+
+    if (strcmp(code, "-.--.") == 0) printascii(40);
+    if (strcmp(code, "-.--.-") == 0) printascii(41);
+    if (strcmp(code, ".-...") == 0) printascii(95);
+    if (strcmp(code, "...-..-") == 0) printascii(36);
+    if (strcmp(code, "...-.-") == 0) printascii(42);
+    if (strcmp(code, ".-.-.") == 0) printascii(60);
+    if (strcmp(code, "...-.") == 0) printascii(126);
+    //////////////////
+    // The specials //
+    //////////////////
+    if (strcmp(code, ".-.-") == 0) printascii(3);
+    if (strcmp(code, "---.") == 0) printascii(4);
+    if (strcmp(code, ".--.-") == 0) printascii(6);
+  }
+  if (sw == SW_JAPANESE) { //wabun
+    if (strcmp(code, "-.--.-") == 0) {
+      printascii(0x28);  //カッコの後は欧文
+      sw = SW_INTERNATIONAL;
     }
+
+    if (strcmp(code, "--.--") == 0) printascii(0xB1);
+    if (strcmp(code, ".-") == 0) printascii(0xB2);
+    if (strcmp(code, "..-") == 0) printascii(0xB3);
+    if (strcmp(code, "-.---") == 0) printascii(0xB4);
+    if (strcmp(code, ".-...") == 0) printascii(0xB5);
+    if (strcmp(code, ".-..") == 0) printascii(0xB6);
+    if (strcmp(code, "-.-..") == 0) printascii(0xB7);
+    if (strcmp(code, "...-") == 0) printascii(0xB8);
+    if (strcmp(code, "-.--") == 0) printascii(0xB9);
+    if (strcmp(code, "----") == 0) printascii(0xBA);
+    if (strcmp(code, "-.-.-") == 0) printascii(0xBB);
+    if (strcmp(code, "--.-.") == 0) printascii(0xBC);
+    if (strcmp(code, "---.-") == 0) printascii(0xBD);
+    if (strcmp(code, ".---.") == 0) printascii(0xBE);
+    if (strcmp(code, "---.") == 0) printascii(0xBF);
+    if (strcmp(code, "-.") == 0) printascii(0xC0);
+    if (strcmp(code, "..-.") == 0) printascii(0xC1);
+    if (strcmp(code, ".--.") == 0) printascii(0xC2);
+    if (strcmp(code, ".-.--") == 0) printascii(0xC3);
+    if (strcmp(code, "..-..") == 0) printascii(0xC4);
+    if (strcmp(code, ".-.") == 0) printascii(0xC5);
+    if (strcmp(code, "-.-.") == 0) printascii(0xC6);
+    if (strcmp(code, "....") == 0) printascii(0xC7);
+    if (strcmp(code, "--.-") == 0) printascii(0xC8);
+    if (strcmp(code, "..--") == 0) printascii(0xC9);
+    if (strcmp(code, "-...") == 0) printascii(0xCA);
+    if (strcmp(code, "--..-") == 0) printascii(0xCB);
+    if (strcmp(code, "--..") == 0) printascii(0xCC);
+    if (strcmp(code, ".") == 0) printascii(0xCD);
+    if (strcmp(code, "-..") == 0) printascii(0xCE);
+    if (strcmp(code, "-..-") == 0) printascii(0xCF);
+    if (strcmp(code, "..-.-") == 0) printascii(0xD0);
+    if (strcmp(code, "-") == 0) printascii(0xD1);
+    if (strcmp(code, "-...-") == 0) printascii(0xD2);
+    if (strcmp(code, "-..-.") == 0) printascii(0xD3);
+    if (strcmp(code, ".--") == 0) printascii(0xD4);
+    if (strcmp(code, "-..--") == 0) printascii(0xD5);
+    if (strcmp(code, "--") == 0) printascii(0xD6);
+    if (strcmp(code, "...") == 0) printascii(0xD7);
+    if (strcmp(code, "--.") == 0) printascii(0xD8);
+    if (strcmp(code, "-.--.") == 0) printascii(0xD9);
+    if (strcmp(code, "---") == 0) printascii(0xDA);
+    if (strcmp(code, ".-.-") == 0) printascii(0xDB);
+    if (strcmp(code, "-.-") == 0) printascii(0xDC);
+    if (strcmp(code, ".-.-.") == 0) printascii(0xDD);
+    if (strcmp(code, "..") == 0) printascii(0xDE);
+    if (strcmp(code, "..--.") == 0) printascii(0xDF);
+    if (strcmp(code, ".---") == 0) printascii(0xA6);
+
+    if (strcmp(code, ".----") == 0) printascii(49);
+    if (strcmp(code, "..---") == 0) printascii(50);
+    if (strcmp(code, "...--") == 0) printascii(51);
+    if (strcmp(code, "....-") == 0) printascii(52);
+    if (strcmp(code, ".....") == 0) printascii(53);
+    if (strcmp(code, "-....") == 0) printascii(54);
+    if (strcmp(code, "--...") == 0) printascii(55);
+    if (strcmp(code, "---..") == 0) printascii(56);
+    if (strcmp(code, "----.") == 0) printascii(57);
+    if (strcmp(code, "-----") == 0) printascii(48);
+
+    if (strcmp(code, "..--..") == 0) printascii(63);
+    //if (strcmp(code,".-.-.-") == 0) printascii(46);
+    if (strcmp(code, "--..--") == 0) printascii(44);
+    if (strcmp(code, "-.-.--") == 0) printascii(33);
+    if (strcmp(code, ".--.-.") == 0) printascii(64);
+    if (strcmp(code, "---...") == 0) printascii(58);
+    if (strcmp(code, "-....-") == 0) printascii(45);
+    //if (strcmp(code,"-..-.") == 0) printascii(47);
+
+    //if (strcmp(code,"-.--.") == 0) printascii(40);
+    //if (strcmp(code,"-.--.-") == 0) printascii(41);
+    //if (strcmp(code,".-...") == 0) printascii(95);
+    //if (strcmp(code,"...-..-") == 0) printascii(36);
+    if (strcmp(code, "...-.-") == 0) printascii(42);
+    //if (strcmp(code,".-.-.") == 0) printascii(60);
+    //if (strcmp(code,"...-.") == 0) printascii(126);
+    if (strcmp(code, ".--.-") == 0) printascii(45);
+    //////////////////
+    // The specials //
+    //////////////////
+    if (strcmp(code, ".-.-..") == 0) printascii(0xA3);
+    if (strcmp(code, ".-.-.-") == 0) printascii(0xA4);
+    //if (strcmp(code,".-.-") == 0) printascii(3);
+    //if (strcmp(code,"---.") == 0) printascii(4);
+    //if (strcmp(code,".--.-") == 0) printascii(6);
+  }
 
 }
 
@@ -497,67 +520,68 @@ void docode(){
 // one a time so we can generate   //
 // special letters                 //
 /////////////////////////////////////
-void printascii(int asciinumber){
+void printascii(int asciinumber) {
 
-int fail = 0;
-if (rows == 4 and colums == 16)fail = -4; /// to fix the library problem with 4*16 display http://forum.arduino.cc/index.php/topic,14604.0.html
- 
- if (lcdindex > colums-1){
-  lcdindex = 0;
-  if (rows==4){
-	  for (int i = 0; i <= colums-1 ; i++){
-		lcd.setCursor(i,rows-3);
-		lcd.write(line2[i]);
-		line2[i]=line1[i];
-	  }
-   }
-  for (int i = 0; i <= colums-1 ; i++){
-    lcd.setCursor(i+fail,rows-2);
-    lcd.write(line1[i]);
-	lcd.setCursor(i+fail,rows-1);
-    lcd.write(32);
+  int fail = 0;
+  if (rows == 4 and colums == 16)fail = -4; /// to fix the library problem with 4*16 display http://forum.arduino.cc/index.php/topic,14604.0.html
+
+  if (lcdindex > colums - 1) {
+    lcdindex = 0;
+    if (rows == 4) {
+      for (int i = 0; i <= colums - 1 ; i++) {
+        lcd.setCursor(i, rows - 3);
+        lcd.write(line2[i]);
+        line2[i] = line1[i];
+      }
+    }
+    for (int i = 0; i <= colums - 1 ; i++) {
+      lcd.setCursor(i + fail, rows - 2);
+      lcd.write(line1[i]);
+      lcd.setCursor(i + fail, rows - 1);
+      lcd.write(32);
+    }
   }
- }
- line1[lcdindex]=asciinumber;
- lcd.setCursor(lcdindex+fail,rows-1);
- lcd.write(asciinumber);
- lcdindex += 1;
+  line1[lcdindex] = asciinumber;
+  lcd.setCursor(lcdindex + fail, rows - 1);
+  lcd.write(asciinumber);
+  lcdindex += 1;
 }
 
-void updateinfolinelcd(){
+void updateinfolinelcd() {
 
   /////////////////////////////////////
-// here we update the upper line   //
-// with the speed.                 //
-/////////////////////////////////////
+  // here we update the upper line   //
+  // with the speed.                 //
+  /////////////////////////////////////
 
   int place;
-  if (rows == 4){
-   place = colums/2;}
-  else{
-   place = 2;
+  if (rows == 4) {
+    place = colums / 2;
   }
-	if (wpm<10){
-		lcd.setCursor((place)-2,0);
-		lcd.print("0");
-		lcd.setCursor((place)-1,0);
-		lcd.print(wpm);
-		lcd.setCursor((place),0);
-                if (sw == SW_INTERNATIONAL){
-                  lcd.print(" WPM [A] ");
-                }else{
-                  lcd.print(" WPM [W] ");
-                }
-	}
-	else{
-  		lcd.setCursor((place)-2,0);
-		lcd.print(wpm);
-		lcd.setCursor((place),0);
-                if (sw == SW_INTERNATIONAL){
-                  lcd.print(" WPM [A] ");
-                }else{
-                  lcd.print(" WPM [W] ");
-                }
-	}
+  else {
+    place = 2;
+  }
+  if (wpm < 10) {
+    lcd.setCursor((place) - 2, 0);
+    lcd.print("0");
+    lcd.setCursor((place) - 1, 0);
+    lcd.print(wpm);
+    lcd.setCursor((place), 0);
+    if (sw == SW_INTERNATIONAL) {
+      lcd.print(" WPM [A] ");
+    } else {
+      lcd.print(" WPM [W] ");
+    }
+  }
+  else {
+    lcd.setCursor((place) - 2, 0);
+    lcd.print(wpm);
+    lcd.setCursor((place), 0);
+    if (sw == SW_INTERNATIONAL) {
+      lcd.print(" WPM [A] ");
+    } else {
+      lcd.print(" WPM [W] ");
+    }
+  }
 
 }
